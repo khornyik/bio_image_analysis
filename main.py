@@ -9,12 +9,8 @@
 import requests
 from io import BytesIO
 from PIL import Image
-import torchvision.transforms as T
-import numpy as np
 from skimage import exposure
 from skimage.filters import gaussian
-import torch 
-import torch.nn.functional as F
 from img_preprocess import resize_img, resize_mask, display_img, to_tensor
 from img_fetch import make_image_fetch
 
@@ -86,5 +82,6 @@ def main():
                 display_img(mask_tensor_enahnced, image_id)
                 break
 
-    
-main()
+
+if __name__ == '__main__':
+    main()
