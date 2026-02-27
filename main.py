@@ -19,6 +19,15 @@ index_page = '%s/webclient/?experimenter=-1' % 'https://idr.openmicroscopy.org'
 
 
 def img_to_tensor(img_bytes):
+    '''
+    Converts bytes of an image to a torch.tensor. 
+    
+    Parameters:
+        img_bytes (bytes): the bytes of the image. 
+
+    Returns:
+        torch.tensor: tensor of the image. 
+    '''
 
     img = Image.open(BytesIO(img_bytes))
     img = img.convert('RGB')

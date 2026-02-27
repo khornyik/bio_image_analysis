@@ -5,7 +5,24 @@ import torch.nn.functional as F
 
 
 class Conv(nn.Module):
+    '''
+    A double convolution layer to improve accuracy of model. 
+
+    Inherits from torch.nn.Module.
+
+    Attributes:
+    ------------
+    layer: double Conv2d layers, both activated by batchNorm2d and finally a ReLU. 
+
+    '''
     def __init__(self, in_size, out_size):
+        '''
+        Initialises the double convolution layer.
+        
+        Parameters:
+            in_size (int): size of input. 
+            out_size (int): size of the output.  
+        '''
         super().__init__()
 
         self.layer = nn.Sequential(
@@ -18,11 +35,42 @@ class Conv(nn.Module):
         )
 
     def forward(self, x):
+        '''
+        Computation at call. 
+        
+        Parameters:
+            x (torch.tensor): tensor to be processed. 
+
+        Returns:
+            (torch.tensor): processed tensor.
+        '''
         return self.layer(x)
     
 
 
 class Encoder(nn.Module):
+    '''
+    Encoder for images. 
+
+    Inherits from torch.nn.Module. 
+
+    Attributes:
+    ------------
+
+    layer1: first double convolution layer of encoder. 
+    layer2: second double convolution layer of encoder.
+    layer3: third double convolution layer of encoder.
+    layer4: fourth double convolution layer of encoder.
+    layer5: fifth double convolution layer of encoder.
+    layer6: sixth double convolution layer of encoder.
+
+    pool1: 2d max pooling over 3 planes.
+    pool2: 2d max pooling over 3 planes.
+    pool3: 2d max pooling over 3 planes.
+    pool4: 2d max pooling over 3 planes.
+    pool5: 2d max pooling over 3 planes.
+
+    '''
     def __init__(self, in_size):
         super().__init__()
 
@@ -44,6 +92,16 @@ class Encoder(nn.Module):
         self.layer6 = Conv(512, 1024)
 
     def forward(self, x):
+        '''
+        Applies double convolution with max poolings which are saved as skips for later use.
+        
+        Parameters:
+            x (torch.tensor): tensor to be processed.
+
+        Returns:
+            z (torch.tensor): the fully processed tensor.
+            (tuple): a tuple of the max poolings at each stage between the double convolutions.
+        '''
 
         skip_1 = self.layer1(x)
         x = self.pool1(skip_1)
@@ -67,7 +125,27 @@ class Encoder(nn.Module):
 
 
 class AttentionLayer(nn.Module):
+    '''
+    The attention layer of the UNet model. 
+
+    Inherits from torch.nn.Module.
+
+    Attributes:
+    ------------
+    w_g: gated short convolution block.
+    w_x: liquid foundation model.
+    psi: convolution down to 1 output channel. 
+
+    '''
     def __init__(self, gating_channels, lfm_channels, int_channels):
+        '''
+        Initialises the attention layer.
+        
+        Parameters:
+            gating_channels (int): size of the input of the gated short convolution layer.
+            lfm_channels (int): size of the input of the liquid foundation model.
+            int_channels (int): output size of the gated and lfm layers. 
+        '''
         super().__init__()
 
         self.w_g = nn.Conv2d(gating_channels, int_channels, 1)
@@ -75,6 +153,16 @@ class AttentionLayer(nn.Module):
         self.psi = nn.Conv2d(int_channels, 1, 1)
 
     def forward(self, x, g):
+        '''
+        Computation at call.
+        
+        Parameters:
+            x (torch.tensor): tensor to be processed.
+            g (torch.tensor): tensor from a max pooling from encoder layer. 
+
+        Returns:
+            (torch.tensor): the input tensor scaled by psi - a tensor of zeroes and ones. 
+        '''
 
         psi = F.relu(self.w_g(g) + self.w_x(x))
         psi = torch.sigmoid(self.psi(psi))
@@ -83,7 +171,28 @@ class AttentionLayer(nn.Module):
 
 
 class NonLocalLayer(nn.Module):
+    '''
+    The non-local layer of the UNet model. 
+
+    Inherits from torch.nn.Module.
+
+    Attributes:
+    ------------
+    theta: single convolution layer.
+    phi: single convolution layer.
+    g: single convolution layer.
+    out: single convolution layer.
+
+    '''
     def __init__(self, in_size):
+        '''
+        Initialises the non-local layer.
+        
+        Inherits from torch.nn.Module.
+
+        Parameters:
+            in_size (int): size of the input. 
+        '''
         super().__init__()
 
         self.theta = nn.Conv2d(in_size, in_size // 2, 1)
@@ -92,6 +201,15 @@ class NonLocalLayer(nn.Module):
         self.out = nn.Conv2d(in_size // 2, in_size, 1)
 
     def forward(self, x):
+        '''
+        Computation at call. 
+        
+        Parameters:
+            x (torch.tensor): tensor to be prcoessed. 
+
+        Returns:
+            (torch.tensor): initial tensor x translated by a tensor of constants. 
+        '''
 
         b, c, h, w = x.shape 
 
