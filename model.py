@@ -15,7 +15,7 @@ class Conv(nn.Module):
     layer: double Conv2d layers, both activated by batchNorm2d and finally a ReLU. 
 
     '''
-    def __init__(self, in_size, out_size):
+    def __init__(self, in_size: int = 0, out_size: int = 0):
         '''
         Initialises the double convolution layer.
         
@@ -34,7 +34,7 @@ class Conv(nn.Module):
             nn.ReLU(inplace = True)
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor = None):
         '''
         Computation at call. 
         
@@ -71,7 +71,13 @@ class Encoder(nn.Module):
     pool5: 2d max pooling over 3 planes.
 
     '''
-    def __init__(self, in_size):
+    def __init__(self, in_size: int = 0):
+        '''
+        Initialises the encoder.
+
+        Parameters:
+            in_size (int): number of input channels.
+        '''
         super().__init__()
 
         self.layer1 = Conv(in_size, 32)
@@ -91,7 +97,7 @@ class Encoder(nn.Module):
 
         self.layer6 = Conv(512, 1024)
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor = None):
         '''
         Applies double convolution with max poolings which are saved as skips for later use.
         
@@ -137,7 +143,7 @@ class AttentionLayer(nn.Module):
     psi: convolution down to 1 output channel. 
 
     '''
-    def __init__(self, gating_channels, lfm_channels, int_channels):
+    def __init__(self, gating_channels: int = 0, lfm_channels: int = 0, int_channels: int = 0):
         '''
         Initialises the attention layer.
         
@@ -152,7 +158,7 @@ class AttentionLayer(nn.Module):
         self.w_x = nn.Conv2d(lfm_channels, int_channels, 1)
         self.psi = nn.Conv2d(int_channels, 1, 1)
 
-    def forward(self, x, g):
+    def forward(self, x: torch.tensor = None, g: torch.tensor = None):
         '''
         Computation at call.
         
@@ -184,7 +190,7 @@ class NonLocalLayer(nn.Module):
     out: single convolution layer.
 
     '''
-    def __init__(self, in_size):
+    def __init__(self, in_size: int = 0):
         '''
         Initialises the non-local layer.
         
@@ -200,7 +206,7 @@ class NonLocalLayer(nn.Module):
         self.g = nn.Conv2d(in_size, in_size // 2, 1)
         self.out = nn.Conv2d(in_size // 2, in_size, 1)
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor = None):
         '''
         Computation at call. 
         
@@ -274,7 +280,7 @@ class NucleiDecoder(nn.Module):
         self.output = nn.Conv2d(32, 1, 1)
 
 
-    def forward(self, z, skips):
+    def forward(self, z: torch.tensor = None, skips: tuple[torch.tensor] = None):
         '''
         Computation at call.
 
@@ -365,7 +371,7 @@ class MembraneDecoder(nn.Module):
         self.output = nn.Conv2d(32, 1, 1)
 
 
-    def forward(self, z, skips):
+    def forward(self, z: torch.tensor = None, skips: tuple[torch.tensor] = None):
         '''
         Computation at call.
 
@@ -431,7 +437,7 @@ class UNet(nn.Module):
         self.d_membrane = MembraneDecoder()
         self.d_nuclei = NucleiDecoder()
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor = None):
         '''
         Computation at call.
 

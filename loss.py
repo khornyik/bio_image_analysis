@@ -15,7 +15,7 @@ class DiceBCELoss(nn.Module):
     size_average: size average to be used for the BCE loss.
 
     '''
-    def __init__(self, weight, size_average):
+    def __init__(self, weight: torch.tensor = None, size_average: bool = None):
         '''
         Initialises the DiceBCE loss.
 
@@ -28,7 +28,7 @@ class DiceBCELoss(nn.Module):
         self.weight = weight
         self.size_average = size_average
 
-    def forward(self, pred, target, smooth):
+    def forward(self, pred: torch.tensor = None, target: torch.tensor = None, smooth: int = 1):
         '''
         Computation at call.
 
@@ -61,17 +61,59 @@ class DiceBCELoss(nn.Module):
 
 
 class TotalLoss(nn.Module):
-    def __init__(self, coef_nuclei, coef_membrane):
+    '''
+    Calculates the total loss by separately finding a loss for both the nuclei and cell membranes.
+    Both use DiceBCE loss as a base, and then adds small differences for each: taking into
+    consideration latent smoothness for the nuclei, and a topology of the cell membranes.
+
+    Attributes:
+    ------------
+    coef_nuclei: scaling coefficient for the latent smoothness loss for nuclei.
+    coef_membrane: scaling coefficient for the topological loss for cell membranes.
+
+    '''
+    def __init__(self, coef_nuclei: float = 0.2, coef_membrane: float = 0.2):
+        '''
+        Initialises the total loss.
+
+        Parameters:
+            coef_nuclei (float): scaling coefficient for the latent smoothness loss for nuclei.
+            coef_membrane (float): scaling coefficient for the topological loss for cell membranes.
+        '''
         super().__init__()
 
         self.coef_nuclei = coef_nuclei
         self.coef_membrane = coef_membrane
 
-    def latent_smoothness(self, z):
+    def latent_smoothness(self, z: torch.tensor = None):
+        '''
+        Gives the latent smoothness for the nuclei.
+
+        Parameters:
+            z (torch.tensor): tensor to calculate its latent smoothness.
+
+        Returns:
+            (float): latent smoothness of the input tensor.
+        '''
         return  ((z[...,1:] - z[...,:-1])**2).mean()
 
 
-    def forward(self, z, pred_nuclei, pred_membrane, target, mask_nuclei, mask_membrane, loss_func):
+    def forward(self, z: torch.tensor = None, pred_nuclei: torch.tensor = None, pred_membrane: torch.tensor = None, target: torch.tensor = None, mask_nuclei: torch.tensor = None, mask_membrane: torch.tensor = None, loss_func = None):
+        '''
+        Computation at call.
+
+        Parameters:
+            z (torch.tensor): tensor from Unet model before decodings.
+            pred_nuclei (torch.tensor): prediction of nuclei.
+            pred_membrane (torch.tensor): prediction of cell membranes.
+            target (torch.tensor): tensor being predicted by the model.
+            mask_nuclei (torch.tensor): tensor of the mask for nuclei.
+            mask_membrane (torch.tensor): tensor of the mask for the cell membranes.
+            loss_func (Callable[float]): loss function which returns a float value as loss. 
+        
+        Returns:
+            (float): total loss value.
+        '''
 
         z_membrane = z[mask_membrane == 1]
         z_background = z[mask_membrane == 0]
@@ -85,4 +127,4 @@ class TotalLoss(nn.Module):
 
 
 
-        return z_membrane, z_background
+        return 1.0

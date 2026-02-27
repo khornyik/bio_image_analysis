@@ -1,6 +1,7 @@
 from functools import lru_cache
+import requests
 
-def make_image_fetch(session):
+def make_image_fetch(session: requests.session = None):
     '''
     Creates the get_image_bytes function to pass the running session. 
     
@@ -8,14 +9,15 @@ def make_image_fetch(session):
         session (requests.session): the running IDR session. 
 
     Returns:
-        Callable[int]:
+        Callable[str, tuple[bytes, bytes]]:
+            Function(image_id: str) -> (r_img.content: bytes, r_mask.content: bytes)
             Function that takes an image ID and loads the bytes of
             the image and mask using an LRU cache. 
 
     '''
 
     @lru_cache(maxsize = 130)
-    def get_image_bytes(image_id: str):
+    def get_image_bytes(image_id: str = None):
         '''
         Takes an image ID and loads the bytes of the image and its mask. These are laoded using 
         LRU cache. 
@@ -24,8 +26,9 @@ def make_image_fetch(session):
             image_id (str): the id of the image.
         
         Returns:
-            r_img.content (bytes): bytes of the image.
-            r_mask.content (bytes): bytes of the mask. 
+            (r_img.content, r_mask.content):
+                r_img.content (bytes): bytes of the image.
+                r_mask.content (bytes): bytes of the mask.
         '''
 
         base_url = 'https://idr.openmicroscopy.org'
