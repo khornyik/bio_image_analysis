@@ -20,8 +20,8 @@ class Conv(nn.Module):
         Initialises the double convolution layer.
         
         Parameters:
-            in_size (int): size of input. 
-            out_size (int): size of the output.  
+            in_size (int): number of channels of input. 
+            out_size (int): number of channels after convolution.  
         '''
         super().__init__()
 
@@ -142,9 +142,9 @@ class AttentionLayer(nn.Module):
         Initialises the attention layer.
         
         Parameters:
-            gating_channels (int): size of the input of the gated short convolution layer.
-            lfm_channels (int): size of the input of the liquid foundation model.
-            int_channels (int): output size of the gated and lfm layers. 
+            gating_channels (int): number of channels of the input of the gated short convolution layer.
+            lfm_channels (int): number of channels of the input of the liquid foundation model.
+            int_channels (int): output channels of the gated and lfm layers. 
         '''
         super().__init__()
 
@@ -228,7 +228,32 @@ class NonLocalLayer(nn.Module):
 
 
 class NucleiDecoder(nn.Module):
+    '''
+    Decoder for the nuclei in images. 
+
+    Inherits from torch.nn.Module.
+
+    Attributes:
+    ------------
+    up1: fractionally-strided convolution layer.
+    up2: fractionally-strided convolution layer.
+    up3: fractionally-strided convolution layer.
+    up4: fractionally-strided convolution layer.
+    up5: fractionally-strided convolution layer.
+
+    layer1: double convolution layer down from 1024 to 512 channels.
+    layer2: double convolution layer down from 512 to 256 channels.
+    layer3: double convolution layer down from 256 to 128 channels.
+    layer4: double convolution layer down from 128 to 64 channels.
+    layer5: double convolution layer down from 64 to 32 channels.
+
+    output: single convolution layer down from 32 to 1 channels.
+    
+    '''
     def __init__(self):
+        '''
+        Initialises the decoder for nuclei.
+        '''
         super().__init__()
 
         self.up5 = nn.ConvTranspose2d(1024, 512, 2, stride = 2)
@@ -250,6 +275,17 @@ class NucleiDecoder(nn.Module):
 
 
     def forward(self, z, skips):
+        '''
+        Computation at call.
+
+        Parameters:
+            z (torch.tensor): the tensor to decode.
+            skips (tuple[torch.tensor]): tuple of intermediate max poolings of different number 
+                of channels from the encoder layer.
+        
+        Returns:
+            (torch.tensor): estimation of nuclei in the original image. 
+        '''
 
         skip_1, skip_2, skip_3, skip_4, skip_5 = skips
 
@@ -273,7 +309,37 @@ class NucleiDecoder(nn.Module):
 
 
 class MembraneDecoder(nn.Module):
+    '''
+    Decoder for cell membranes in the image.
+
+    Inherits from torch.nn.Module.
+
+    Attributes:
+    ------------
+    up1: fractionally-strided convolution layer.
+    up2: fractionally-strided convolution layer.
+    up3: fractionally-strided convolution layer.
+    up4: fractionally-strided convolution layer.
+    up5: fractionally-strided convolution layer.
+
+    layer1: double convolution layer down from 1024 to 512 channels.
+    layer2: double convolution layer down from 512 to 256 channels.
+    layer3: double convolution layer down from 256 to 128 channels.
+    layer4: double convolution layer down from 128 to 64 channels.
+    layer5: double convolution layer down from 64 to 32 channels.
+
+    att1: atention layer layer at 512 channels.
+    att2: atention layer layer at 256 channels.
+    att3: atention layer layer at 128 channels.
+    att4: atention layer layer at 64 channels.
+    att5:  atention layer layer at 32 channels.
+
+    output: single convolution layer down from 32 to 1 channels.
+    '''
     def __init__(self):
+        '''
+        Initialises the decoder for cell membranes.
+        '''
         super().__init__()
 
         self.up5 = nn.ConvTranspose2d(1024, 512, 2, stride = 2)
@@ -300,6 +366,17 @@ class MembraneDecoder(nn.Module):
 
 
     def forward(self, z, skips):
+        '''
+        Computation at call.
+
+        Parameters:
+            z (torch.tensor): the tensor to decode.
+            skips (tuple[torch.tensor]): tuple of intermediate max poolings of different number 
+                of channels from the encoder layer.
+
+        Returns:
+            (torch.tensor): estimation of cell membranes in the original image.
+        '''
 
         skip_1, skip_2, skip_3, skip_4, skip_5 = skips
 
@@ -327,7 +404,25 @@ class MembraneDecoder(nn.Module):
 
 
 class UNet(nn.Module):
+    '''
+    UNet model consisting of an encoder, bottleneck, non-local layer, and a decoder for the 
+    nuclei and cell membranes.
+
+    Inherits from torch.nn.Module.
+
+    Attributes:
+    ------------
+    encoder: encoder for the model.
+    bn: bottleneck for the model (single convolution from 512 to 1024 channels).
+    non_local: non-local layer for model.
+    d_membrane: decoder for the cell membranes.
+    d_nuclei: decoder for the nuclei.
+
+    '''
     def __init__(self):
+        '''
+        Initialises the UNet model.
+        '''
         super().__init__()
 
         self.encoder = Encoder()
@@ -337,6 +432,17 @@ class UNet(nn.Module):
         self.d_nuclei = NucleiDecoder()
 
     def forward(self, x):
+        '''
+        Computation at call.
+
+        Parameters:
+            x (torch.tensor): the image to segment.
+
+        Returns:
+            pred_nuclei (torch.tensor): prediciton of the nuclei in the original image.
+            pred_membrane (torch.tensor): prediction of the cell memranes in the original image.
+            z (torch.tensor): intermediate tensor before decoding.
+        '''
         z, skips = self.encoder(x)
         z = self.bn(z)
         z = self.non_local(z)
