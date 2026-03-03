@@ -174,7 +174,7 @@ class TotalLoss(nn.Module):
 
         loss_nuclei = loss_func(pred_nuclei, mask_nuclei) + self.coef_nuclei * l_smoothness
 
-        loss_membrance = loss_func(pred_membrane, mask_membrane) + self.coef_membrane * l_contrastive(pred_membrane, mask_membrane)
+        loss_membrane = loss_func(pred_membrane, mask_membrane) + self.coef_membrane * l_contrastive(pred_membrane, mask_membrane)
 
 
 
