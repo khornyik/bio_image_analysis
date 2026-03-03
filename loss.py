@@ -1,6 +1,7 @@
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+from math import e
 
 
 class DiceBCELoss(nn.Module):
@@ -57,6 +58,55 @@ class DiceBCELoss(nn.Module):
         return dice_bce
 
 
+class NTXentLoss(nn.Module):
+    '''
+    Implements simple Normalised Temperature-scaled Cross-Entropy loss as presented in 
+    "A Simple Framework for Contrastive Learning of Visual Representation" (https://arxiv.org/abs/2002.05709).
+
+    Inherits from torch.nn.Module.
+
+    Attributes:
+    ------------
+    alpha: constant to scale loss.
+    cos_similarity: function to calculate the cosine similarity of two vectors.
+
+    '''
+    def __init__(self, alpha: float = 0.1):
+        '''
+        Initialises the ntxent loss.
+
+        Parameters:
+            alpha (float): a constant to scale the loss (the temperature).
+        '''
+        super().__init__()
+
+        self.alpha = alpha
+        self.cos_similarity = nn.CosineSimilarity()
+
+    def forward(self, pred: torch.tensor = None, target: torch.tensor = None):
+        '''
+        Computation on call.
+
+        Parameters:
+            pred (torch.tensor): the predicted tensor of the image.
+            target (torch.tensor): the image being predicted.
+
+        Returns:
+            (torch.tensor): the total NTXent loss.
+        '''
+
+        # Negative Loss
+        feature_mat = torch.nn.functional.normalize(torch.cat([pred, target]))
+        cos_mat = (2 - torch.cdist(feature_mat, feature_mat) ** 2) / 2
+        exp_cos_mat = torch.exp(cos_mat * self.alpha)
+        negative_loss = torch.log(exp_cos_mat.sum(dim = 1) - e ** (1 / self.alpha))
+
+        # Positive Loss
+        positive_loss = self.cos_similarity(pred, target) / self.alpha
+        positive_loss = torch.cat(positive_loss, positive_loss)
+
+        # Total Loss
+        return negative_loss - positive_loss
 
 
 
@@ -82,10 +132,11 @@ class TotalLoss(nn.Module):
         '''
         super().__init__()
 
-        self.coef_nuclei = coef_nuclei
+        self.coef_nuclei = coef_nuclei 
         self.coef_membrane = coef_membrane
 
-    def latent_smoothness(self, z: torch.tensor = None):
+    @staticmethod
+    def latent_smoothness(z: torch.tensor = None):
         '''
         Gives the latent smoothness for the nuclei.
 
@@ -119,12 +170,13 @@ class TotalLoss(nn.Module):
         z_background = z[mask_membrane == 0]
 
         l_smoothness = self.latent_smoothness(z)
+        l_contrastive = NTXentLoss(alpha = 0.2)
 
         loss_nuclei = loss_func(pred_nuclei, mask_nuclei) + self.coef_nuclei * l_smoothness
 
-        loss_membrance = loss_func(pred_membrane, mask_membrane) # add more
+        loss_membrance = loss_func(pred_membrane, mask_membrane) + self.coef_membrane * l_contrastive(pred_membrane, mask_membrane)
 
 
 
-
+        # currently returning 1 since the class is not finished yet!
         return 1.0
