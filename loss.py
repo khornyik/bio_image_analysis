@@ -149,6 +149,21 @@ class TotalLoss(nn.Module):
         return  ((z[...,1:] - z[...,:-1])**2).mean()
 
 
+    @staticmethod
+    def topo_loss(pred_membrane: torch.tensor = None):
+        '''
+        Gives a topological accuracy based on tensor dimensions. 
+
+        Parameters:
+            pred_membrane (torch.tensor): the prediction coming from the membrane decoder.
+
+        Return:
+            (tensor): the loss based on dimensional differences in the prediction.
+        '''
+        loss = torch.mean((pred_membrane[:, :,  1:, :] - pred_membrane[:, :, :-1, :]) ** 2) / torch.mean((pred_membrane[:, :, :, 1:] - pred_membrane[:, :, :, :-1]) ** 2)
+        return loss
+
+
     def forward(self, z: torch.tensor = None, pred_nuclei: torch.tensor = None, pred_membrane: torch.tensor = None, target: torch.tensor = None, mask_nuclei: torch.tensor = None, mask_membrane: torch.tensor = None, loss_func = None):
         '''
         Computation at call.
@@ -171,12 +186,10 @@ class TotalLoss(nn.Module):
 
         l_smoothness = self.latent_smoothness(z)
         l_contrastive = NTXentLoss(alpha = 0.2)
+        topological_loss = self.topo_loss(pred_membrane = pred_membrane)
 
         loss_nuclei = loss_func(pred_nuclei, mask_nuclei) + self.coef_nuclei * l_smoothness
 
-        loss_membrane = loss_func(pred_membrane, mask_membrane) + self.coef_membrane * l_contrastive(pred_membrane, mask_membrane)
+        loss_membrane = loss_func(pred_membrane, mask_membrane) + self.coef_membrane * l_contrastive(z_membrane, z_background) + self.coef_membrane * topological_loss
 
-
-
-        # currently returning 1 since the class is not finished yet!
-        return 1.0
+        return loss_nuclei + loss_membrane
