@@ -13,12 +13,14 @@ from skimage import exposure
 from skimage.filters import gaussian
 from img_preprocess import resize_img, resize_mask, display_img, to_tensor
 from img_fetch import make_image_fetch
+from model import UNet
+from loss import TotalLoss
 
 
 index_page = '%s/webclient/?experimenter=-1' % 'https://idr.openmicroscopy.org'
 
 
-def img_to_tensor(img_bytes):
+def img_to_tensor(img_bytes: bytes = None):
     '''
     Converts bytes of an image to a torch.tensor. 
     
@@ -91,6 +93,4 @@ def main():
                 display_img(mask_tensor_enahnced, image_id)
                 break
 
-
-if __name__ == '__main__':
     main()
